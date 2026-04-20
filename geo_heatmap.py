@@ -2,6 +2,7 @@
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 import collections
+from datetime import date
 import fnmatch
 import folium
 from folium.plugins import HeatMap
@@ -287,8 +288,9 @@ if __name__ == "__main__":
         "- Your location history KML file from Google Takeout\n"
         "- The takeout-*.zip raw download from Google Takeout \nthat contains either of the above files\n"
         "- A GPX file containing GPS tracks")
+    default_output = os.path.join("output", "heatmap_{}.html".format(date.today().isoformat()))
     parser.add_argument("-o", "--output", dest="output", type=str, required=False,
-                        help="Path of heatmap HTML output file.", default="heatmap.html")
+                        help="Path of heatmap HTML output file.", default=default_output)
     parser.add_argument("--min-date", dest="min_date", metavar="YYYY-MM-DD", type=str, required=False,
                         help="The earliest date from which you want to see data in the heatmap.")
     parser.add_argument("--max-date", dest="max_date", metavar="YYYY-MM-DD", type=str, required=False,
@@ -323,6 +325,7 @@ if __name__ == "__main__":
         "max_zoom": args.max_zoom
     }
 
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     generator = Generator()
     generator.run(data_file, output_file, date_range, stream_data, settings)
     # Check if browser is text-based
