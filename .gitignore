@@ -8,6 +8,7 @@
 takeout-*.zip
 *.gpx
 !package.json
+Location History/
 # generated files
 *.html
 
