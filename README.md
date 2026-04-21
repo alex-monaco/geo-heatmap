@@ -2,6 +2,9 @@
 
 <p align="center"><img src="https://user-images.githubusercontent.com/45404400/63515170-7a9cd280-c4ea-11e9-8875-e693622ac26e.png" alt="screenshot" width="400"></p>
 
+> **⚠️ This repository is public. Never commit your location history or any personal data.**
+> All data files (`.json`, `.kml`, `.gpx`, `data/`) are gitignored, but always run `git status` before committing to confirm no personal files are staged.
+
 This is a script that generates an interactive geo heatmap from your Google location history data using Python, Folium and OpenStreetMap.
 
 ## Getting Started
