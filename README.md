@@ -129,6 +129,28 @@ optional arguments:
 
 The script will generate a HTML file at `data/output/heatmap_<date>.html`. This file will automatically open in your browser once the script completes. Enjoy!
 
+## Additional Scripts
+
+### Travel Paths (`travel_paths.py`)
+
+Generates an interactive map of your travel history with routes color-coded by transport mode. Uses actual GPS waypoints from your location history to follow real paths, and aggregates frequently-traveled routes into thicker lines so busy roads stand out.
+
+```shell
+python travel_paths.py location-history.json
+```
+
+Each transport mode is its own toggleable layer (Walking, Cycling, Driving, Train, Subway, Ferry, Flying, etc.). Flying segments are rendered as great circle arcs. Line width reflects how many times you've traveled each segment — a highway you drive daily appears much thicker than a road you've used once.
+
+```
+usage: travel_paths.py [-h] [-o OUTPUT] [--min-date YYYY-MM-DD]
+                       [--max-date YYYY-MM-DD] [-z ZOOM_START]
+                       file [file ...]
+```
+
+Output: `data/output/travel_paths_<date>.html`
+
+---
+
 ## FAQ
 
 ### I'm getting an "Out of Memory" error or `MemoryError` when I try to run the script. What's going on?
