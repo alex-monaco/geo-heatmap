@@ -342,9 +342,9 @@ if __name__ == "__main__":
     parser.add_argument("--max-date", dest="max_date", metavar="YYYY-MM-DD", type=str, required=False,
                         help="The latest date from which you want to see data in the heatmap.")
     parser.add_argument("-s", "--stream", dest="stream", action="store_true", help="Option to iteratively load data.")
-    parser.add_argument("--map", "-m", dest="map", metavar="MAP", type=str, required=False, default="OpenStreetMap",
+    parser.add_argument("--map", "-m", dest="map", metavar="MAP", type=str, required=False, default="CartoDB positron",
                         help="The name of the map tiles you want to use.\n" \
-                        "(e.g. 'OpenStreetMap', 'StamenTerrain', 'StamenToner', 'StamenWatercolor')")
+                        "(e.g. 'CartoDB positron', 'CartoDB dark_matter', 'OpenStreetMap')")
     parser.add_argument("-z", "--zoom-start", dest="zoom_start", type=int, required=False,
                         help="The initial zoom level for the map. (default: %(default)s)", default=6)
     parser.add_argument("-r", "--radius", type=int, required=False,
