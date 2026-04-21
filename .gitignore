@@ -9,6 +9,8 @@ takeout-*.zip
 *.gpx
 !package.json
 Location History/
+data/
+Data/
 # generated files
 *.html
 output/

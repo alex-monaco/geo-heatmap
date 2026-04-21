@@ -127,7 +127,7 @@ optional arguments:
 
 ### 6. Review the Results
 
-The script will generate a HTML file named `heatmap.html`. This file will automatically open in your browser once the script completes. Enjoy!
+The script will generate a HTML file at `data/output/heatmap_<date>.html`. This file will automatically open in your browser once the script completes. Enjoy!
 
 ## FAQ
 

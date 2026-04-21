@@ -43,6 +43,30 @@ class Generator:
 
         return key_timestamp
 
+    @staticmethod
+    def parseGeoCoord(geo_str):
+        """Parse a 'geo:lat,lon' string into a (lat, lon) tuple."""
+        _, coords = geo_str.split(":", 1)
+        lat, lon = coords.split(",")
+        return round(float(lat), 6), round(float(lon), 6)
+
+    @staticmethod
+    def isNewJSONFormat(data):
+        """Returns True if data is the new timeline format (top-level array)."""
+        return isinstance(data, list)
+
+    def _coordsFromNewRecord(self, record):
+        """Extract a (lat, lon) tuple from a new-format timeline record, or None."""
+        if "visit" in record:
+            place_loc = record["visit"].get("topCandidate", {}).get("placeLocation", "")
+            if place_loc.startswith("geo:"):
+                return self.parseGeoCoord(place_loc)
+        elif "activity" in record:
+            start_loc = record["activity"].get("start", "")
+            if start_loc.startswith("geo:"):
+                return self.parseGeoCoord(start_loc)
+        return None
+
     def loadJSONData(self, json_file, date_range):
         """Loads the Google location data from the given json file.
 
@@ -54,21 +78,28 @@ class Generator:
         """
         data = json.load(json_file)
 
-        # Find the correct key for timestamps
-        first_element = data["locations"][0]
-        key_timestamp = self.findTimestampKey(first_element)
+        if self.isNewJSONFormat(data):
+            w = [Bar(), Percentage(), " ", ETA()]
+            with ProgressBar(max_value=len(data), widgets=w) as pb:
+                for i, record in enumerate(data):
+                    coords = self._coordsFromNewRecord(record)
+                    if coords and timestampInRange(record.get("startTime", ""), date_range):
+                        self.updateCoord(coords)
+                    pb.update(i)
+        else:
+            first_element = data["locations"][0]
+            key_timestamp = self.findTimestampKey(first_element)
 
-        w = [Bar(), Percentage(), " ", ETA()]
-        with ProgressBar(max_value=len(data["locations"]), widgets=w) as pb:
-            for i, loc in enumerate(data["locations"]):
-                if "latitudeE7" not in loc or "longitudeE7" not in loc:
-                    continue
-                coords = (round(loc["latitudeE7"] / 1e7, 6),
-                           round(loc["longitudeE7"] / 1e7, 6))
-
-                if timestampInRange(loc[key_timestamp], date_range):
-                    self.updateCoord(coords)
-                pb.update(i)
+            w = [Bar(), Percentage(), " ", ETA()]
+            with ProgressBar(max_value=len(data["locations"]), widgets=w) as pb:
+                for i, loc in enumerate(data["locations"]):
+                    if "latitudeE7" not in loc or "longitudeE7" not in loc:
+                        continue
+                    coords = (round(loc["latitudeE7"] / 1e7, 6),
+                               round(loc["longitudeE7"] / 1e7, 6))
+                    if timestampInRange(loc[key_timestamp], date_range):
+                        self.updateCoord(coords)
+                    pb.update(i)
 
     def streamJSONData(self, json_file, date_range):
         """Stream the Google location data from the given json file.
@@ -79,31 +110,46 @@ class Generator:
             date_range {tuple} -- A tuple containing the min-date and max-date.
                 e.g.: (None, None), (None, '2019-01-01'), ('2017-02-11'), ('2019-01-01')
         """
-        # Estimate location amount
+        # Detect format by peeking at the first non-whitespace character
+        first_char = ""
+        while not first_char.strip():
+            first_char = json_file.read(1)
+        json_file.seek(0)
+
         max_value_est = sum(1 for line in json_file) / 13
         json_file.seek(0)
 
-        locations = ijson.items(json_file, "locations.item")
-        w = [Bar(), Percentage(), " ", ETA()]
-        with ProgressBar(max_value=max_value_est, widgets=w) as pb:
-            for i, loc in enumerate(locations):
-                # Find the correct key for timestamps
-                # This is done in the loop because the data are streamed
-                if i == 0:
-                    key_timestamp = self.findTimestampKey(loc)
-
-                if "latitudeE7" not in loc or "longitudeE7" not in loc:
-                    continue
-                coords = (round(loc["latitudeE7"] / 1e7, 6),
-                            round(loc["longitudeE7"] / 1e7, 6))
-
-                if timestampInRange(loc[key_timestamp], date_range):
-                    self.updateCoord(coords)
-
-                if i > max_value_est:
-                    max_value_est = i
-                    pb.max_value = i
-                pb.update(i)
+        if first_char == "[":
+            # New format: top-level array of timeline records
+            records = ijson.items(json_file, "item")
+            w = [Bar(), Percentage(), " ", ETA()]
+            with ProgressBar(max_value=max_value_est, widgets=w) as pb:
+                for i, record in enumerate(records):
+                    coords = self._coordsFromNewRecord(record)
+                    if coords and timestampInRange(record.get("startTime", ""), date_range):
+                        self.updateCoord(coords)
+                    if i > max_value_est:
+                        max_value_est = i
+                        pb.max_value = i
+                    pb.update(i)
+        else:
+            # Old format: {"locations": [...]}
+            locations = ijson.items(json_file, "locations.item")
+            w = [Bar(), Percentage(), " ", ETA()]
+            with ProgressBar(max_value=max_value_est, widgets=w) as pb:
+                for i, loc in enumerate(locations):
+                    if i == 0:
+                        key_timestamp = self.findTimestampKey(loc)
+                    if "latitudeE7" not in loc or "longitudeE7" not in loc:
+                        continue
+                    coords = (round(loc["latitudeE7"] / 1e7, 6),
+                                round(loc["longitudeE7"] / 1e7, 6))
+                    if timestampInRange(loc[key_timestamp], date_range):
+                        self.updateCoord(coords)
+                    if i > max_value_est:
+                        max_value_est = i
+                        pb.max_value = i
+                    pb.update(i)
 
     def loadKMLData(self, file_name, date_range):
         """Loads the Google location data from the given KML file.
@@ -288,7 +334,7 @@ if __name__ == "__main__":
         "- Your location history KML file from Google Takeout\n"
         "- The takeout-*.zip raw download from Google Takeout \nthat contains either of the above files\n"
         "- A GPX file containing GPS tracks")
-    default_output = os.path.join("output", "heatmap_{}.html".format(date.today().isoformat()))
+    default_output = os.path.join("data", "output", "heatmap_{}.html".format(date.today().isoformat()))
     parser.add_argument("-o", "--output", dest="output", type=str, required=False,
                         help="Path of heatmap HTML output file.", default=default_output)
     parser.add_argument("--min-date", dest="min_date", metavar="YYYY-MM-DD", type=str, required=False,
